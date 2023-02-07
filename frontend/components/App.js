@@ -14,18 +14,15 @@ export default class App extends React.Component {
     const { value } = e.target
     this.setState({ ...this.state, todoNameInput: value });
   }
-  
-  postNewTodo = () => {
-    axios.post(URL, { name: this.state.todoNameInput })
-      .then(res => {
-        this.fetchAllTodos();
-        this.setState({ ...this.state, todoNameInput: '' });
-      })
-      .catch(err => {
-        this.setState({ ...this.state, error: err.response.data.message });
-      })
+
+  resetForm = () => {
+    this.setState({ ...this.state, todoNameInput: '' });
   }
 
+  setAxiosResponseError = err => {
+    this.setState({ ...this.state, error: err.response.data.message });
+  }
+  
   onToDoFormSubmit = e => {
     e.preventDefault();
     this.postNewTodo();
@@ -36,9 +33,29 @@ export default class App extends React.Component {
       .then(res => {
         this.setState({ ...this.state, todos: res.data.data });
       })
-      .catch(err => {
-        this.setState({ ...this.state, error: err.response.data.message });
+      .catch(this.setAxiosResponseError);
+  }
+
+  postNewTodo = () => {
+    axios.post(URL, { name: this.state.todoNameInput })
+      .then(res => {
+        this.setState({ ...this.state, todos: this.state.todos.concat(res.data.data) })
+        this.resetForm();
       })
+      .catch(this.setAxiosResponseError);
+  }
+
+  toggleCompleted = id => () => {
+    axios.patch(`${URL}/${id}`)
+      .then(res => {
+        this.setState({
+          ...this.state, todos: this.state.todos.map(item => {
+            if (item.id !== id) return item;
+            return res.data.data;
+          })
+        })
+      })
+      .catch(this.setAxiosResponseError);
   }
 
   componentDidMount() {
@@ -53,7 +70,7 @@ export default class App extends React.Component {
           <h2>Todo:</h2>
           {
             this.state.todos.map(item => {
-              return <div key={item.id}>{item.name}</div>
+              return <div onClick={this.toggleCompleted(item.id)} key={item.id}>{item.name} {item.completed ? ' ✓' : ''}</div>
             })
           }
         </div>
